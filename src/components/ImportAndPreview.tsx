@@ -1,7 +1,6 @@
 import "./ImportAndPreview.scss";
 import { useRef, useState } from "react";
-import Modal from "react-modal";
-import { idText } from "typescript";
+import Modal from "./Modal";
 
 interface tumbnailDetails {
   resolution: string;
@@ -16,14 +15,17 @@ interface importedFile {
   filePreview: string | ArrayBuffer | null | undefined;
 }
 
+interface selectedFileInterface {
+  file: string | ArrayBuffer | null | undefined;
+  isImage: boolean;
+}
+
 export default function ImportAndPreview() {
   const [importedFiles, setImportedFiles] = useState<importedFile[]>([]);
   const [openPreview, setOpenPreview] = useState<boolean>(false);
-  const [tempTumbnail, setTempTumbnail] = useState<tumbnailDetails>({
-    resolution: "",
-    duration: 0,
-    size: 0,
-    type: "",
+  const [selectedFile, setSelectedFile] = useState<selectedFileInterface>({
+    file: null,
+    isImage: false,
   });
   const videoRef = useRef<Array<HTMLVideoElement | HTMLImageElement | null>>(
     []
@@ -93,13 +95,21 @@ export default function ImportAndPreview() {
     );
   }
 
+  function prepModalData(index: number) {
+    setSelectedFile({
+      file: importedFiles[index].filePreview,
+      isImage: importedFiles[index].isImage,
+    });
+    setOpenPreview(true);
+  }
+
   function preview(fullSize: boolean, customClass?: string) {
     let items: any = [];
-    importedFiles?.map((item, index) => {
+    importedFiles.forEach((item, index) => {
       if (item.isImage) {
         items.push(
           <div className="import-and-preview__thumbnail_item" key={index}>
-            <span onClick={() => setOpenPreview(true)}>
+            <span onClick={() => prepModalData(index)}>
               <img
                 src={item.filePreview as string}
                 alt=""
@@ -115,7 +125,7 @@ export default function ImportAndPreview() {
                 <li>Type: {item.tumbnailDetails.type}</li>
               </ul>
             </span>
-            <div className="close" onClick={() => handleDelete(index)}>
+            <div className="deleteItemBtn" onClick={() => handleDelete(index)}>
               x
             </div>
           </div>
@@ -123,7 +133,7 @@ export default function ImportAndPreview() {
       } else {
         items.push(
           <div className="import-and-preview__thumbnail_item" key={index}>
-            <span onClick={() => setOpenPreview(true)}>
+            <span onClick={() => prepModalData(index)}>
               <video
                 onLoadedMetadata={() => handleVideoMetadata(index)}
                 ref={(el) => (videoRef.current[index] = el)}
@@ -142,7 +152,7 @@ export default function ImportAndPreview() {
                 <li>Type: {item.tumbnailDetails.type}</li>
               </ul>
             </span>
-            <div className="close" onClick={() => handleDelete(index)}>
+            <div className="deleteItemBtn" onClick={() => handleDelete(index)}>
               x
             </div>
           </div>
@@ -155,7 +165,6 @@ export default function ImportAndPreview() {
   function handleVideoMetadata(selectedIndex: number) {
     const video = videoRef.current[selectedIndex];
     if (!video) return;
-
     var newImportedFiles: importedFile[] = importedFiles.map((item, index) => {
       if (index === selectedIndex) {
         item.tumbnailDetails.resolution =
@@ -172,27 +181,21 @@ export default function ImportAndPreview() {
   }
 
   return (
-    <div className="import-and-preview">
-      <h1 className="import-and-preview__title">Import file</h1>
-      <div>
-        <input accept="image/*, video/*" onChange={previewFile} type="file" />
+    <>
+      <div className="import-and-preview">
+        <h1 className="import-and-preview__title">Import file</h1>
+        <div>
+          <input accept="image/*, video/*" onChange={previewFile} type="file" />
+        </div>
+        <div>
+          <span className="import-and-preview__thumbnail_container">
+            {preview(false, "import-and-preview__thumbnail")}
+          </span>
+        </div>
       </div>
-      <div>
-        <span className="import-and-preview__thumbnail_container">
-          {preview(false, "import-and-preview__thumbnail")}
-        </span>
-      </div>
-
-      <Modal
-        ariaHideApp={false}
-        isOpen={openPreview}
-        onRequestClose={() => setOpenPreview(false)}
-        style={{
-          content: { width: "fit-content", height: "fit-content" },
-        }}
-      >
-        {preview(true)}
-      </Modal>
-    </div>
+      {openPreview && (
+        <Modal selectedFile={selectedFile} openPreview={setOpenPreview}></Modal>
+      )}
+    </>
   );
 }
