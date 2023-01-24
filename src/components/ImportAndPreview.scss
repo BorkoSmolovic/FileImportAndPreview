@@ -12,6 +12,17 @@
     height: 100px;
   }
 
+  &__thumbnail_container {
+    display: flex;
+    flex-wrap: wrap;
+    flex-flow: space-around;
+  }
+
+  &__thumbnail_item:hover {
+    border: 1px solid deepskyblue;
+    scale: 1.1;
+  }
+
   div {
     display: flex;
     justify-content: center;
