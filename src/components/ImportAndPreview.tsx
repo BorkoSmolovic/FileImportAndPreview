@@ -1,6 +1,7 @@
 import "./ImportAndPreview.scss";
 import { useRef, useState } from "react";
 import Modal from "react-modal";
+import { idText } from "typescript";
 
 interface tumbnailDetails {
   resolution: string;
@@ -44,43 +45,52 @@ export default function ImportAndPreview() {
       allFiles = [
         ...importedFiles,
         {
-          tumbnailDetails: getTumbnailDetails(readerEvent, selectedFile),
+          tumbnailDetails: {
+            resolution: "",
+            duration: 0,
+            size: selectedFile.size,
+            type: selectedFile.type,
+          },
           isImage: selectedFile.type.includes("image") ? true : false,
           filePreview: readerEvent.target.result,
         },
       ];
       setImportedFiles(allFiles);
-
-      // setDetails(readerEvent, selectedFile);
+      if (selectedFile.type.includes("image")) {
+        setImageResolution(readerEvent, allFiles);
+      }
     };
   }
 
-  function getTumbnailDetails(
+  function setImageResolution(
     readerEvent: ProgressEvent<FileReader>,
-    selectedFile: File
+    allFiles: importedFile[]
   ) {
-    let tumbnailDetails = {
-      resolution: "",
-      duration: 0,
-      size: 0,
-      type: "",
+    if (!readerEvent || !readerEvent.target) return;
+    let img: any = new Image();
+    img.src = readerEvent.target.result;
+    img.onload = function () {
+      let str = img.width + "x" + img.height;
+      setImageDetails(str, allFiles);
     };
-    if (!readerEvent || !readerEvent.target) return tumbnailDetails;
+  }
 
-    if (selectedFile.type.includes("image")) {
-      let img: any = new Image();
-      img.src = readerEvent.target.result;
-      console.log("UDJEL#########333333333333", img.width);
-      img.onload = function () {
-        return {
-          resolution: ((img.width as string) + "x" + img.height) as string,
-          duration: 0,
-          size: selectedFile.size,
-          type: selectedFile.type,
-        };
-      };
-    }
-    return tumbnailDetails;
+  function setImageDetails(str: string, allFiles: importedFile[]) {
+    var newImportedFiles: importedFile[] = allFiles.map((item, index) => {
+      if (index === allFiles.length - 1) {
+        item.tumbnailDetails.resolution = str;
+        return item;
+      } else {
+        return item;
+      }
+    });
+    setImportedFiles(newImportedFiles);
+  }
+
+  function handleDelete(selectedIndex: number) {
+    setImportedFiles(
+      importedFiles.filter((item, index) => index !== selectedIndex)
+    );
   }
 
   function preview(fullSize: boolean, customClass?: string) {
@@ -89,7 +99,7 @@ export default function ImportAndPreview() {
       if (item.isImage) {
         items.push(
           <div className="import-and-preview__thumbnail_item" key={index}>
-            <span>
+            <span onClick={() => setOpenPreview(true)}>
               <img
                 src={item.filePreview as string}
                 alt=""
@@ -105,12 +115,15 @@ export default function ImportAndPreview() {
                 <li>Type: {item.tumbnailDetails.type}</li>
               </ul>
             </span>
+            <div className="close" onClick={() => handleDelete(index)}>
+              x
+            </div>
           </div>
         );
       } else {
         items.push(
           <div className="import-and-preview__thumbnail_item" key={index}>
-            <span>
+            <span onClick={() => setOpenPreview(true)}>
               <video
                 onLoadedMetadata={() => handleVideoMetadata(index)}
                 ref={(el) => (videoRef.current[index] = el)}
@@ -129,27 +142,33 @@ export default function ImportAndPreview() {
                 <li>Type: {item.tumbnailDetails.type}</li>
               </ul>
             </span>
+            <div className="close" onClick={() => handleDelete(index)}>
+              x
+            </div>
           </div>
         );
       }
     });
-    console.log("test", items);
     return items;
   }
 
-  function handleVideoMetadata(index: number) {
-    const video = videoRef.current[index];
+  function handleVideoMetadata(selectedIndex: number) {
+    const video = videoRef.current[selectedIndex];
     if (!video) return;
 
-    // setTumbnalDetails({
-    //   resolution:
-    //     (video as HTMLVideoElement).videoWidth +
-    //     "x" +
-    //     (video as HTMLVideoElement).videoHeight,
-    //   duration: Math.round((video as HTMLVideoElement).duration * 100) / 100,
-    //   size: tumbnailDetails.size,
-    //   type: tumbnailDetails.type,
-    // });
+    var newImportedFiles: importedFile[] = importedFiles.map((item, index) => {
+      if (index === selectedIndex) {
+        item.tumbnailDetails.resolution =
+          (video as HTMLVideoElement).videoWidth +
+          "x" +
+          (video as HTMLVideoElement).videoHeight;
+        item.tumbnailDetails.duration = (video as HTMLVideoElement).duration;
+        return item;
+      } else {
+        return item;
+      }
+    });
+    setImportedFiles(newImportedFiles);
   }
 
   return (
@@ -159,10 +178,7 @@ export default function ImportAndPreview() {
         <input accept="image/*, video/*" onChange={previewFile} type="file" />
       </div>
       <div>
-        <span
-          onClick={() => setOpenPreview(true)}
-          className="import-and-preview__thumbnail_container"
-        >
+        <span className="import-and-preview__thumbnail_container">
           {preview(false, "import-and-preview__thumbnail")}
         </span>
       </div>
